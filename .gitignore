@@ -1,0 +1,23 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Compilacion
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+
+packages/
+Debug/
+Release/
+
+# Logs
+*.log
+
+*.cache
+*.pdb
+*.exe
+*.dll
+*.log
