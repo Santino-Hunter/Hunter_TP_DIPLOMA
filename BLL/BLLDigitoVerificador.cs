@@ -89,7 +89,53 @@ namespace BLL
                 Columnas = new List<string> { "ID_F", "ID_F2" },
                 ColumnasPK = new List<string> { "ID_F", "ID_F2" },
                 ColumnasOrden = new List<string> { "ID_F", "ID_F2" }
+            },
+            
+            new ConfiguracionDV
+            {
+                NombreTabla = "Cliente",
+                Columnas = new List<string>
+                {
+                    "IdCliente",
+                    "Nombre",
+                    "Apellido",
+                    "Telefono",
+                    "CorreoElectronico"
+                },
+                ColumnasPK = new List<string> { "IdCliente" },
+                ColumnasOrden = new List<string> { "IdCliente" }
+            },
+
+            new ConfiguracionDV
+            {
+                NombreTabla = "Mesa",
+                Columnas = new List<string>
+                {
+                    "NumeroMesa",
+                    "Capacidad"
+                },
+                ColumnasPK = new List<string> { "NumeroMesa" },
+                ColumnasOrden = new List<string> { "NumeroMesa" }
+            },
+
+            new ConfiguracionDV
+            {
+                NombreTabla = "Reserva",
+                Columnas = new List<string>
+                {
+                    "NumeroReserva",
+                    "IdCliente",
+                    "NumeroMesa",
+                    "Fecha",
+                    "HoraInicio",
+                    "CantidadComensales",
+                    "Observaciones",
+                    "Estado"
+                },
+                ColumnasPK = new List<string> { "NumeroReserva" },
+                ColumnasOrden = new List<string> { "NumeroReserva" }
             }
+
         };
 
         public ResultadoIntegridad Verificar()
@@ -177,6 +223,26 @@ namespace BLL
         {
             RecalcularSeguridad();
         }
+
+        public void RecalcularTabla(string nombreTabla)
+        {
+            ConfiguracionDV config = tablas.Find(
+                t => t.NombreTabla.Equals(
+                    nombreTabla,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (config == null)
+                throw new Exception(
+                    "La tabla no está configurada para dígitos verificadores.");
+
+            ResultadoIntegridad resultado = new ResultadoIntegridad();
+
+            if (!InfraestructuraCreada(resultado))
+                throw new Exception(resultado.Mensaje);
+
+            RecalcularTabla(config);
+        }
+
 
         private bool InfraestructuraCreada(ResultadoIntegridad resultado)
         {
@@ -475,6 +541,25 @@ namespace BLL
                 partes.Add(pk + "=" + fila[pk].ToString());
 
             return string.Join(" / ", partes);
+        }
+
+        public void RecalcularTabla(string nombreTabla)
+        {
+            ConfiguracionDV config = tablas.Find(
+                t => t.NombreTabla.Equals(
+                    nombreTabla,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (config == null)
+                throw new ArgumentException(
+                    "La tabla no está configurada para dígitos verificadores.");
+
+            ResultadoIntegridad resultado = new ResultadoIntegridad();
+
+            if (!InfraestructuraCreada(resultado))
+                throw new Exception(resultado.Mensaje);
+
+            RecalcularTabla(config);
         }
 
         private class ConfiguracionDV
