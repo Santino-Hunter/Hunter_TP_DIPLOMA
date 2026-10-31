@@ -556,6 +556,25 @@ namespace BLL
             return string.Join(" / ", partes);
         }
 
+        public void RecalcularTabla(string nombreTabla)
+        {
+            ConfiguracionDV config = tablas.Find(
+                t => t.NombreTabla.Equals(
+                    nombreTabla,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (config == null)
+                throw new ArgumentException(
+                    "La tabla no está configurada para dígitos verificadores.");
+
+            ResultadoIntegridad resultado = new ResultadoIntegridad();
+
+            if (!InfraestructuraCreada(resultado))
+                throw new Exception(resultado.Mensaje);
+
+            RecalcularTabla(config);
+        }
+
         private class ConfiguracionDV
         {
             public string NombreTabla { get; set; }
