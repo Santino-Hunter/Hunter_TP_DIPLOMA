@@ -9,6 +9,7 @@ namespace DAL
     internal class ACCESO
     {
         private SqlConnection conexion;
+        private SqlTransaction transaccion;
         private readonly string StrConexion;
 
         public ACCESO()
@@ -22,25 +23,83 @@ namespace DAL
             conexion.Open();
         }
 
-        public void Cerrar()
+        public void IniciarTransaccion()
         {
-            if (conexion != null)
+            if (conexion == null || conexion.State != ConnectionState.Open)
+                throw new InvalidOperationException("La conexión debe estar abierta para iniciar una transacción.");
+
+            if (transaccion != null)
+                throw new InvalidOperationException("Ya existe una transacción activa.");
+
+            transaccion = conexion.BeginTransaction();
+        }
+
+        public void ConfirmarTransaccion()
+        {
+            if (transaccion == null)
+                throw new InvalidOperationException("No existe una transacción activa.");
+
+            transaccion.Commit();
+            transaccion.Dispose();
+            transaccion = null;
+        }
+
+        public void RevertirTransaccion()
+        {
+            if (transaccion == null)
+                return;
+
+            try
             {
-                conexion.Close();
-                conexion.Dispose();
-                conexion = null;
+                transaccion.Rollback();
+            }
+            finally
+            {
+                transaccion.Dispose();
+                transaccion = null;
             }
         }
+
+
+        public void Cerrar()
+        {
+            try
+            {
+                if (transaccion != null)
+                {
+                    RevertirTransaccion();
+                }
+            }
+            finally
+            {
+                if (conexion != null)
+                {
+                    conexion.Close();
+                    conexion.Dispose();
+                    conexion = null;
+                }
+            }
+        }
+
+
 
         private SqlCommand CrearComando(string sql, List<SqlParameter> parametros = null)
         {
             SqlCommand cmd = new SqlCommand(sql, conexion);
+
             cmd.CommandType = CommandType.Text;
+
+            if (transaccion != null)
+            {
+                cmd.Transaction = transaccion;
+            }
 
             if (parametros != null)
             {
                 foreach (SqlParameter p in parametros)
+                {
                     cmd.Parameters.Add(p);
+                }
             }
 
             return cmd;

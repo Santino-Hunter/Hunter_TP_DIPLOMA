@@ -18,7 +18,20 @@ namespace BLL
         private const string PREFIJO_FILA = "PK:";
         private const string MARCADOR_TABLA_VACIA = "__TABLA_VACIA__";
 
-        private readonly MP_DIGITOVERIFICADOR mp = new MP_DIGITOVERIFICADOR();
+        private readonly MP_DIGITOVERIFICADOR mp;
+
+        public BLLDigitoVerificador()
+        {
+            mp = new MP_DIGITOVERIFICADOR();
+        }
+
+        public BLLDigitoVerificador(MP_DIGITOVERIFICADOR mapper)
+        {
+            if (mapper == null)
+                throw new ArgumentNullException("mapper");
+
+            mp = mapper;
+        }
         private readonly SERVICESDigitoVerificador servicio = new SERVICESDigitoVerificador();
 
         private readonly List<ConfiguracionDV> tablas = new List<ConfiguracionDV>
@@ -89,7 +102,53 @@ namespace BLL
                 Columnas = new List<string> { "ID_F", "ID_F2" },
                 ColumnasPK = new List<string> { "ID_F", "ID_F2" },
                 ColumnasOrden = new List<string> { "ID_F", "ID_F2" }
+            },
+            
+            new ConfiguracionDV
+            {
+                NombreTabla = "Cliente",
+                Columnas = new List<string>
+                {
+                    "IdCliente",
+                    "Nombre",
+                    "Apellido",
+                    "Telefono",
+                    "CorreoElectronico"
+                },
+                ColumnasPK = new List<string> { "IdCliente" },
+                ColumnasOrden = new List<string> { "IdCliente" }
+            },
+
+            new ConfiguracionDV
+            {
+                NombreTabla = "Mesa",
+                Columnas = new List<string>
+                {
+                    "NumeroMesa",
+                    "Capacidad"
+                },
+                ColumnasPK = new List<string> { "NumeroMesa" },
+                ColumnasOrden = new List<string> { "NumeroMesa" }
+            },
+
+            new ConfiguracionDV
+            {
+                NombreTabla = "Reserva",
+                Columnas = new List<string>
+                {
+                    "NumeroReserva",
+                    "IdCliente",
+                    "NumeroMesa",
+                    "Fecha",
+                    "HoraInicio",
+                    "CantidadComensales",
+                    "Observaciones",
+                    "Estado"
+                },
+                ColumnasPK = new List<string> { "NumeroReserva" },
+                ColumnasOrden = new List<string> { "NumeroReserva" }
             }
+
         };
 
         public ResultadoIntegridad Verificar()
@@ -177,6 +236,26 @@ namespace BLL
         {
             RecalcularSeguridad();
         }
+
+        public void RecalcularTabla(string nombreTabla)
+        {
+            ConfiguracionDV config = tablas.Find(
+                t => t.NombreTabla.Equals(
+                    nombreTabla,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (config == null)
+                throw new Exception(
+                    "La tabla no está configurada para dígitos verificadores.");
+
+            ResultadoIntegridad resultado = new ResultadoIntegridad();
+
+            if (!InfraestructuraCreada(resultado))
+                throw new Exception(resultado.Mensaje);
+
+            RecalcularTabla(config);
+        }
+
 
         private bool InfraestructuraCreada(ResultadoIntegridad resultado)
         {

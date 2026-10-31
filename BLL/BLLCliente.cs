@@ -33,7 +33,13 @@ namespace BLL
             if (clienteExistente != null)
                 throw new Exception("El cliente ya se encuentra registrado.");
 
-            return mp.Guardar(cliente) > 0;
+            int resultado = mp.GuardarConIntegridad(cliente, mpDV =>
+            {
+                BLLDigitoVerificador bllDV = new BLLDigitoVerificador(mpDV);
+                bllDV.RecalcularTabla("Cliente");
+            });
+
+            return resultado > 0;
         }
 
         private bool ValidarCliente(BECliente cliente)

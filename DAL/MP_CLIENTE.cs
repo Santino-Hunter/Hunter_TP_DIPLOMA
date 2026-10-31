@@ -11,13 +11,33 @@ namespace DAL
 {
     public class MP_CLIENTE : MAPPER<BECliente>
     {
+        private readonly bool accesoCompartido;
+
+        public MP_CLIENTE()
+        {
+            accesoCompartido = false;
+        }
+
+        internal MP_CLIENTE(ACCESO accesoExistente)
+        {
+            if (accesoExistente == null)
+                throw new ArgumentNullException("accesoExistente");
+
+            acceso = accesoExistente;
+            accesoCompartido = true;
+        }
+
+
         public override int Guardar(BECliente cliente)
         {
-            acceso = new ACCESO();
+            if (!accesoCompartido)
+            {
+                acceso = new ACCESO();
+                acceso.Abrir();
+            }
 
             try
             {
-                acceso.Abrir();
 
                 List<SqlParameter> parametros = new List<SqlParameter>();
 
@@ -53,7 +73,8 @@ namespace DAL
             }
             finally
             {
-                acceso.Cerrar();
+                if (!accesoCompartido && acceso != null)
+                    acceso.Cerrar();
             }
         }
 
@@ -97,7 +118,8 @@ namespace DAL
                         Nombre,
                         Apellido,
                         Telefono,
-                        CorreoElectronico
+                        CorreoElectronico,
+                        DVH
                     FROM Cliente
                     ORDER BY Apellido, Nombre");
 
@@ -134,7 +156,8 @@ namespace DAL
                         Nombre,
                         Apellido,
                         Telefono,
-                        CorreoElectronico
+                        CorreoElectronico,
+                        DVH
                     FROM Cliente
                     WHERE
                         (@Telefono <> ''
@@ -179,7 +202,45 @@ namespace DAL
 
             cliente.CorreoElectronico = row["CorreoElectronico"].ToString();
 
+            cliente.DVH = Convert.ToInt64(row["DVH"]);
+
             return cliente;
         }
+
+
+        public int GuardarConIntegridad(BECliente cliente, Action<MP_DIGITOVERIFICADOR> actualizarIntegridad)
+        {
+            if (actualizarIntegridad == null)
+                throw new ArgumentNullException("actualizarIntegridad");
+
+            ACCESO accesoLocal = new ACCESO();
+
+            try
+            {
+                accesoLocal.Abrir();
+                accesoLocal.IniciarTransaccion();
+
+                MP_CLIENTE mpCliente = new MP_CLIENTE(accesoLocal);
+                MP_DIGITOVERIFICADOR mpDV = new MP_DIGITOVERIFICADOR(accesoLocal);
+
+                int resultado = mpCliente.Guardar(cliente);
+
+                if (resultado == 0)
+                {
+                    accesoLocal.RevertirTransaccion();
+                    return 0;
+                }
+
+                actualizarIntegridad(mpDV);
+                accesoLocal.ConfirmarTransaccion();
+
+                return resultado;
+            }
+            finally
+            {
+                accesoLocal.Cerrar();
+            }
+        }
+
     }
 }
