@@ -118,8 +118,7 @@ namespace DAL
                         Nombre,
                         Apellido,
                         Telefono,
-                        CorreoElectronico,
-                        DVH
+                        CorreoElectronico
                     FROM Cliente
                     ORDER BY Apellido, Nombre");
 
@@ -156,8 +155,7 @@ namespace DAL
                         Nombre,
                         Apellido,
                         Telefono,
-                        CorreoElectronico,
-                        DVH
+                        CorreoElectronico
                     FROM Cliente
                     WHERE
                         (@Telefono <> ''
@@ -201,8 +199,6 @@ namespace DAL
             cliente.Telefono = row["Telefono"].ToString();
 
             cliente.CorreoElectronico = row["CorreoElectronico"].ToString();
-
-            cliente.DVH = Convert.ToInt64(row["DVH"]);
 
             return cliente;
         }

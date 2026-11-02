@@ -11,6 +11,22 @@ namespace DAL
 {
     public class MP_RESERVA : MAPPER<BEReserva>
     {
+        private readonly bool accesoCompartido;
+
+        public MP_RESERVA()
+        {
+            accesoCompartido = false;
+        }
+
+        internal MP_RESERVA(ACCESO accesoExistente)
+        {
+            if (accesoExistente == null)
+                throw new ArgumentNullException("accesoExistente");
+
+            acceso = accesoExistente;
+            accesoCompartido = true;
+        }
+
         private const string SELECT_BASE = @"
             SELECT
                 R.NumeroReserva,
@@ -40,14 +56,16 @@ namespace DAL
 
         public override int Guardar(BEReserva reserva)
         {
-            acceso = new ACCESO();
+            if (!accesoCompartido)
+            {
+                acceso = new ACCESO();
+                acceso.Abrir();
+            }
 
             try
             {
-                acceso.Abrir();
 
-                List<SqlParameter> parametros =
-                    CrearParametrosReserva(reserva);
+                List<SqlParameter> parametros = CrearParametrosReserva(reserva);
 
                 DataTable tabla = acceso.Leer(@"
                     INSERT INTO Reserva
@@ -84,18 +102,21 @@ namespace DAL
             }
             finally
             {
-                acceso.Cerrar();
+                if (!accesoCompartido && acceso != null)
+                    acceso.Cerrar();
             }
         }
 
         public override int Modificar(BEReserva reserva)
         {
-            acceso = new ACCESO();
+            if (!accesoCompartido)
+            {
+                acceso = new ACCESO();
+                acceso.Abrir();
+            }
 
             try
             {
-                acceso.Abrir();
-
                 List<SqlParameter> parametros = CrearParametrosReserva(reserva);
 
                 parametros.Add(acceso.CrearParametro("@NumeroReserva", reserva.NumeroReserva));
@@ -104,7 +125,42 @@ namespace DAL
             }
             finally
             {
-                acceso.Cerrar();
+                if (!accesoCompartido && acceso != null)
+                    acceso.Cerrar();
+            }
+        }
+
+        public int GuardarConIntegridad(BEReserva reserva, bool modificar, Action<MP_DIGITOVERIFICADOR> actualizarIntegridad)
+        {
+            if (actualizarIntegridad == null)
+                throw new ArgumentNullException("actualizarIntegridad");
+
+            ACCESO accesoLocal = new ACCESO();
+
+            try
+            {
+                accesoLocal.Abrir();
+                accesoLocal.IniciarTransaccion();
+
+                MP_RESERVA mpReserva = new MP_RESERVA(accesoLocal);
+                MP_DIGITOVERIFICADOR mpDV = new MP_DIGITOVERIFICADOR(accesoLocal);
+
+                int resultado = modificar ? mpReserva.Modificar(reserva) : mpReserva.Guardar(reserva);
+
+                if (resultado <= 0)
+                {
+                    accesoLocal.RevertirTransaccion();
+                    return 0;
+                }
+
+                actualizarIntegridad(mpDV);
+                accesoLocal.ConfirmarTransaccion();
+
+                return resultado;
+            }
+            finally
+            {
+                accesoLocal.Cerrar();
             }
         }
 

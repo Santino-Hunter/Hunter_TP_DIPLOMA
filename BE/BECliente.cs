@@ -18,6 +18,5 @@ namespace BE
 
         public string CorreoElectronico { get; set; }
 
-        public long DVH { get; set; }
     }
 }

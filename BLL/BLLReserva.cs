@@ -1,5 +1,6 @@
 ﻿using BE;
 using DAL;
+using SERVICES;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +18,23 @@ namespace BLL
         private const string ESTADO_CUMPLIDA = "Cumplida";
         private const string ESTADO_AUSENTE = "Ausente";
 
+        private bool GuardarConDV(BEReserva reserva, bool modificar)
+        {
+            BLLDigitoVerificador bllDV = new BLLDigitoVerificador();
+            ResultadoIntegridad integridad = bllDV.Verificar();
+
+            if (!integridad.Correcto)
+                throw new Exception("Se detectaron inconsistencias de integridad. No se puede modificar la reserva.");
+
+            int resultado = mp.GuardarConIntegridad(reserva, modificar, mpDV =>
+            {
+                BLLDigitoVerificador bllIntegridad = new BLLDigitoVerificador(mpDV);
+                bllIntegridad.RecalcularTabla("Reserva");
+            });
+
+            return resultado > 0;
+        }
+
         public bool RegistrarReserva(BEReserva reserva)
         {
             if (reserva != null)
@@ -24,7 +42,7 @@ namespace BLL
 
             ValidarReserva(reserva);
 
-            return mp.Guardar(reserva) > 0;
+            return GuardarConDV(reserva, false);
         }
 
         public List<BEReserva> ListarReservasReservadas()
@@ -62,7 +80,7 @@ namespace BLL
 
             ValidarReserva(reserva);
 
-            return mp.Modificar(reserva) > 0;
+            return GuardarConDV(reserva, true);
         }
 
         public bool CancelarReserva(BEReserva reserva)
@@ -71,7 +89,7 @@ namespace BLL
 
             existente.CambiarEstado(ESTADO_CANCELADA);
 
-            return mp.Modificar(existente) > 0;
+            return GuardarConDV(existente, true);
         }
 
         public List<BEReserva> ConsultarReservas(DateTime? fecha, int? numeroMesa, string estado)
@@ -96,7 +114,7 @@ namespace BLL
 
             existente.CambiarEstado(asistio ? ESTADO_CUMPLIDA : ESTADO_AUSENTE);
 
-            return mp.Modificar(existente) > 0;
+            return GuardarConDV(existente, true);
         }
 
         private bool ValidarReserva(BEReserva reserva)
